@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixMyCity — Citizen Leaderboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="topbar">
+        <div class="brand">Fix<span>My</span>City</div>
+        <div class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a href="report.html">Report</a>
+            <a href="feed.html">Feed</a>
+            <a href="leaderboard.html" class="active">Rankings</a>
+        </div>
+        <div class="auth-btn-group" id="auth-buttons">
+            <button class="btn btn-outline" onclick="showModal('login-modal')">Login</button>
+            <button class="btn btn-primary" onclick="showModal('register-modal')">Register</button>
+        </div>
+        <div class="auth-btn-group" id="user-profile" style="display:none;">
+            <span id="user-info" style="font-weight: 600; color: var(--cyan-accent);">Citizen</span>
+            <button class="btn btn-outline" onclick="handleLogout()" style="padding: 8px 16px; font-size: 0.85rem;">Logout</button>
+        </div>
+    </nav>
+
+    <main class="content">
+        <h1 class="page-title">Citizen Leaderboard</h1>
+
+        <div class="leaderboard-card">
+            <h2 style="font-size: 1.3rem; margin-bottom: 20px; font-weight: 700;">Top Civic Contributors</h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Rank</th>
+                        <th>Name</th>
+                        <th>Reputation Level</th>
+                        <th style="text-align: right; width: 150px;">Points Earned</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            Loading leaderboard records...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Login to FixMyCity</h3>
+                <button class="modal-close" onclick="closeModal('login-modal')">&times;</button>
+            </div>
+            <form onsubmit="executeLogin(event)">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" class="form-control" required placeholder="Enter username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" required placeholder="Enter password">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('login-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- REGISTER MODAL -->
+    <div id="register-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Register Account</h3>
+                <button class="modal-close" onclick="closeModal('register-modal')">&times;</button>
+            </div>
+            <form onsubmit="executeRegister(event)">
+                <div class="form-group">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" class="form-control" required placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label for="reg-username">Username</label>
+                    <input type="text" id="reg-username" class="form-control" required placeholder="Choose a username">
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" class="form-control" required placeholder="Enter email address">
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Password</label>
+                    <input type="password" id="reg-password" class="form-control" required placeholder="Create password (min 4 characters)">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('register-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        function checkUserAuth() {
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            const authButtons = document.getElementById('auth-buttons');
+            const userProfile = document.getElementById('user-profile');
+            const userInfo = document.getElementById('user-info');
+            
+            if (user) {
+                authButtons.style.display = 'none';
+                userProfile.style.display = 'flex';
+                userInfo.textContent = `${user.name} (${user.points || 0} XP)`;
+            } else {
+                authButtons.style.display = 'flex';
+                userProfile.style.display = 'none';
+            }
+        }
+        
+        function showModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+        
+        async function executeLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            try {
+                const user = await loginUser({ username, password });
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                closeModal('login-modal');
+                checkUserAuth();
+                alert('Logged in successfully!');
+                window.location.reload();
+            } catch (err) {
+                alert('Login failed: ' + err.message);
+            }
+        }
+        
+        async function executeRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            try {
+                const user = await registerUser({ name, username, email, password });
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                closeModal('register-modal');
+                checkUserAuth();
+                alert('Registered successfully!');
+                window.location.reload();
+            } catch (err) {
+                alert('Registration failed: ' + err.message);
+            }
+        }
+        
+        function handleLogout() {
+            localStorage.removeItem('currentUser');
+            checkUserAuth();
+            alert('Logged out successfully.');
+            window.location.reload();
+        }
+
+        async function loadLeaderboardData() {
+            const body = document.getElementById('leaderboard-body');
+            
+            try {
+                const data = await getLeaderboard();
+                
+                if (data.length === 0) {
+                    body.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 30px; color: var(--text-muted);">No active citizen records found. Register and report issues to start earning XP!</td></tr>';
+                    return;
+                }
+                
+                body.innerHTML = '';
+                data.forEach((user, index) => {
+                    const row = document.createElement('tr');
+                    row.className = `rank-${index + 1}`;
+                    
+                    let rankBadge = `${index + 1}`;
+                    if (index === 0) rankBadge = '🥇';
+                    else if (index === 1) rankBadge = '🥈';
+                    else if (index === 2) rankBadge = '🥉';
+                    
+                    let reputationLevel = 'Novice Citizen';
+                    const pts = user.points || 0;
+                    if (pts >= 200) reputationLevel = 'Elite Ward Marshall';
+                    else if (pts >= 100) reputationLevel = 'Active Inspector';
+                    else if (pts >= 50) reputationLevel = 'Community Helper';
+                    
+                    row.innerHTML = `
+                        <td><span class="rank-number">${rankBadge}</span></td>
+                        <td><span class="citizen-name">${user.name}</span></td>
+                        <td><span style="color: var(--text-gray);">${reputationLevel}</span></td>
+                        <td style="text-align: right;"><span class="citizen-points">${pts} XP</span></td>
+                    `;
+                    body.appendChild(row);
+                });
+            } catch (err) {
+                console.error('Error loading leaderboard:', err);
+                body.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 30px; color: var(--danger);">Failed to load rankings. Make sure the backend service is running.</td></tr>';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            checkUserAuth();
+            loadLeaderboardData();
+        });
+    </script>
+</body>
+</html>
